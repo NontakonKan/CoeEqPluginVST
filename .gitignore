@@ -1,0 +1,16 @@
+# JUCE specific
+Builds/
+JuceLibraryCode/
+*.jucer.user
+
+# CMake (if used)
+build/
+cmake-build-*/
+
+# Common IDE/OS files
+.DS_Store
+*.user
+*.suo
+*.userosscache
+*.sln
+*.vcxproj
