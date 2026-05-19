@@ -7,7 +7,16 @@ SSLEQAudioProcessor::createParams()
 {
     std::vector<std::unique_ptr<juce::RangedAudioParameter>> params;
 
-    for (int i = 0; i < 6; i++) {
+    // Input Gain
+    params.push_back(std::make_unique<juce::AudioParameterFloat>(
+        juce::ParameterID { "input", 1 },
+        "Input Gain",
+        juce::NormalisableRange<float>(-20.0f, 20.0f, 0.01f),
+        0.0f,
+        juce::AudioParameterFloatAttributes().withLabel("dB")));
+
+    // 6 EQ Bands
+    for (int i = 1; i < 7; i++) {
         params.push_back(std::make_unique<juce::AudioParameterFloat>(
             juce::ParameterID { PARAM_ID_LIST[i], 1 },
             PARAM_NAME_LIST[i],
@@ -15,6 +24,8 @@ SSLEQAudioProcessor::createParams()
             0.0f,
             juce::AudioParameterFloatAttributes().withLabel("dB")));
     }
+
+    // Output Gain
     params.push_back(std::make_unique<juce::AudioParameterFloat>(
         juce::ParameterID { "output", 1 },
         "Output Gain",
@@ -42,10 +53,17 @@ void SSLEQAudioProcessor::releaseResources() { eqEngine.reset(); }
 
 void SSLEQAudioProcessor::syncParamsToProcessor()
 {
-    for (int i = 0; i < 6; i++) {
+    // Input Gain
+    float in = apvts.getRawParameterValue("input")->load();
+    eqEngine.setInputGain(in);
+
+    // 6 EQ Bands
+    for (int i = 1; i < 7; i++) {
         float v = apvts.getRawParameterValue(PARAM_ID_LIST[i])->load();
-        eqEngine.setBandGain(i, v);
+        eqEngine.setBandGain(i - 1, v);
     }
+
+    // Output Gain
     float out = apvts.getRawParameterValue("output")->load();
     eqEngine.setOutputGain(out);
 }

@@ -47,14 +47,18 @@ public:
         }
     }
 
+    void setInputGain(float gainDB) {
+        inputGain = juce::Decibels::decibelsToGain(gainDB);
+    }
+
     void setOutputGain(float gainDB) {
         outputGain = juce::Decibels::decibelsToGain(gainDB);
     }
 
     void processBlock(float* L, float* R, int numSamples) {
         for (int i = 0; i < numSamples; ++i) {
-            float sL = L[i];
-            float sR = R[i];
+            float sL = L[i] * inputGain;
+            float sR = R[i] * inputGain;
 
             for (int j = 0; j < 6; ++j) {
                 sL = filterL[j].processSample(sL);
@@ -75,6 +79,7 @@ public:
 
 private:
     double currentSampleRate = 44100.0;
+    float inputGain = 1.0f;
     float outputGain = 1.0f;
     float frequencies[6];
     
@@ -83,8 +88,8 @@ private:
 };
 
 // ─── 2. PARAMETERS & AUDIO PROCESSOR ──────────────────────────
-static const juce::StringArray PARAM_ID_LIST { "band200", "band300", "band500", "band1k", "band2k5", "band8k", "output" };
-static const juce::StringArray PARAM_NAME_LIST { "EQ 200 Hz", "EQ 300 Hz", "EQ 500 Hz", "EQ 1 kHz", "EQ 2.5 kHz", "EQ 8 kHz", "Output" };
+static const juce::StringArray PARAM_ID_LIST { "input", "band200", "band300", "band500", "band1k", "band2k5", "band8k", "output" };
+static const juce::StringArray PARAM_NAME_LIST { "Input Gain", "EQ 200 Hz", "EQ 300 Hz", "EQ 500 Hz", "EQ 1 kHz", "EQ 2.5 kHz", "EQ 8 kHz", "Output Gain" };
 
 class SSLEQAudioProcessor : public juce::AudioProcessor
 {

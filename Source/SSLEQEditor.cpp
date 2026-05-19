@@ -1,22 +1,32 @@
 #include "SSLEQEditor.h"
 #include "SSLEQPlugin.h"
 
-static const char* PARAM_IDS[7] = {
-    "band200", "band300", "band500", "band1k",
-    "band2k5", "band8k", "output"
+static const char* PARAM_IDS[8] = {
+    "input", "band200", "band300", "band500",
+    "band1k", "band2k5", "band8k", "output"
 };
-static const char* PARAM_LABELS[7] = {
-    "200 Hz", "300 Hz", "500 Hz", "1 kHz",
-    "2.5 kHz", "8 kHz", "Output"
+static const char* PARAM_LABELS[8] = {
+    "Input", "200 Hz", "300 Hz", "500 Hz",
+    "1 kHz", "2.5 kHz", "8 kHz", "Output"
 };
 
-// Colours matching the SSL hardware aesthetic
-static const juce::Colour BG_DARK   { 0xff1a1a1a };
-static const juce::Colour BG_PANEL  { 0xff242424 };
-static const juce::Colour GREEN_LED { 0xff00e676 };
-static const juce::Colour AMBER_LED { 0xffffd740 };
-static const juce::Colour BLUE_ACC  { 0xff40c4ff };
-static const juce::Colour TEXT_DIM  { 0xff888888 };
+// Colours matching the CoE UI design - 8 distinct colors
+static const juce::Colour BG_MAIN      { 0xffffffff };
+static const juce::Colour BG_PANEL     { 0xffffffff };
+static const juce::Colour GREEN_LED    { 0xff00e676 };
+static const juce::Colour TEXT_DIM     { 0xff555555 };
+
+// Knob colors for each band (matching the image)
+static const juce::Colour KNOB_COLORS[8] = {
+    juce::Colour(0xffff4444),  // Red - Input
+    juce::Colour(0xffbb44ff),  // Purple - 200Hz
+    juce::Colour(0xff4488ff),  // Dark Blue - 300Hz
+    juce::Colour(0xff44ccff),  // Light Blue - 500Hz
+    juce::Colour(0xff44ffdd),  // Cyan - 1kHz
+    juce::Colour(0xff44ff88),  // Green - 2.5kHz
+    juce::Colour(0xffccff44),  // Yellow-Green - 8kHz
+    juce::Colour(0xffffaa44)   // Orange - Output
+};
 
 // ─── Custom LookAndFeel for SSL-style knobs ──────────────────
 class SSLKnobLF : public juce::LookAndFeel_V4
@@ -87,14 +97,15 @@ private:
 SSLEQEditor::SSLEQEditor(SSLEQAudioProcessor& p)
     : AudioProcessorEditor(&p), audioProcessor(p)
 {
-    setSize(640, 340);
+    setSize(800, 380);
 
     auto& apvts = audioProcessor.getAPVTS();
 
+    logoImage1 = juce::ImageFileFormat::loadFrom(BinaryData::logo_jpg, BinaryData::logo_jpgSize);
+    logoImage2 = juce::ImageFileFormat::loadFrom(BinaryData::logo2_png, BinaryData::logo2_pngSize);
+
     for (int i = 0; i < NUM_SLIDERS; i++) {
-        bool isOutput = (i == NUM_SLIDERS - 1);
-        juce::Colour accent = isOutput ? AMBER_LED
-                            : (i == 0 ? BLUE_ACC : GREEN_LED);
+        juce::Colour accent = KNOB_COLORS[i];
 
         auto* lf = new SSLKnobLF(accent);
         sliders[i].setLookAndFeel(lf);
@@ -167,32 +178,46 @@ void SSLEQEditor::buildFreqCurve()
 void SSLEQEditor::paint(juce::Graphics& g)
 {
     // Background
-    g.fillAll(BG_DARK);
+    g.fillAll(BG_MAIN);
 
     // Header bar
     g.setColour(BG_PANEL);
     g.fillRect(0, 0, getWidth(), 36);
-    g.setColour(juce::Colour(0xff333333));
+    g.setColour(juce::Colour(0xffffffff));
     g.drawHorizontalLine(36, 0.0f, (float)getWidth());
 
     // Title
-    g.setFont(juce::Font(juce::FontOptions(13.0f).withStyle("bold")));
-    g.setColour(GREEN_LED);
-    g.drawText("SSL  \xc2\xb7  6-BAND EQ", 16, 0, 260, 36,
+    g.setFont(juce::Font(juce::FontOptions(16.0f).withStyle("bold")));
+    g.setColour(juce::Colour(0xff000000));
+    g.drawText("COE  PLUG-IN  EQ", 16, 6, 400, 28,
                juce::Justification::centredLeft);
-    g.setFont(juce::Font(juce::FontOptions(9.0f)));
+    g.setFont(juce::Font(juce::FontOptions(8.0f)));
     g.setColour(TEXT_DIM);
-    g.drawText("PROPORTIONAL-Q  \xc2\xb7  LOW SHELF / 4\xc3\x97 PEAK / HIGH SHELF",
-               0, 0, getWidth() - 12, 36, juce::Justification::centredRight);
+    g.drawText("INPUT  \xc2\xb7  6-BAND EQ  \xc2\xb7  OUTPUT",
+               0, 20, getWidth() - 12, 14, juce::Justification::centredRight);
 
-    // Display area background
-    g.setColour(juce::Colour(0xff0a120a));
-    g.fillRoundedRectangle(displayArea, 4.0f);
-    g.setColour(juce::Colour(0xff1a2e1a));
-    g.drawRoundedRectangle(displayArea, 4.0f, 0.5f);
+    // Draw logos in top-right corner
+    const int logoSize = 48;
+    const int padding = 10;
+    const int x2 = getWidth() - padding - logoSize;
+    const int x1 = x2 - padding - logoSize;
+    const int y  = 6;
 
-    // Grid lines
-    g.setColour(juce::Colour(0x18004000));
+    if (logoImage1.isValid())
+        g.drawImageWithin(logoImage1, x1, y, logoSize, logoSize,
+                          juce::RectanglePlacement::centred, false);
+    if (logoImage2.isValid())
+        g.drawImageWithin(logoImage2, x2, y, logoSize, logoSize,
+                          juce::RectanglePlacement::centred, false);
+
+    // Display area background - large gray panel
+    g.setColour(juce::Colour(0xff3a3a3a));
+    g.fillRoundedRectangle(displayArea, 6.0f);
+    g.setColour(juce::Colour(0xff555555));
+    g.drawRoundedRectangle(displayArea, 6.0f, 1.0f);
+
+    // Grid lines - subtle
+    g.setColour(juce::Colour(0x1a555555));
     const float W = displayArea.getWidth();
     const float H = displayArea.getHeight();
     const float cx = displayArea.getX();
@@ -204,41 +229,33 @@ void SSLEQEditor::paint(juce::Graphics& g)
         return cy + H * 0.5f - (float)(db / 32.0 * 0.85f * H);
     };
 
-    for (double f : { 50.0, 100.0, 200.0, 500.0, 1000.0, 2000.0, 5000.0, 10000.0 })
+    // Vertical grid lines for frequency
+    for (double f : { 100.0, 500.0, 1000.0, 5000.0, 10000.0 })
         g.drawVerticalLine((int)toX(f), cy, cy + H);
-    for (double db : { -15.0, -10.0, -5.0, 0.0, 5.0, 10.0, 15.0 })
+    
+    // Horizontal grid lines for dB
+    for (double db : { -12.0, -6.0, 0.0, 6.0, 12.0 })
         g.drawHorizontalLine((int)toY(db), cx, cx + W);
 
-    // Zero line slightly brighter
-    g.setColour(juce::Colour(0x2800c850));
+    // Center line (0dB) - slightly brighter
+    g.setColour(juce::Colour(0x40aaaaaa));
     g.drawHorizontalLine((int)toY(0.0), cx, cx + W);
 
     // Freq response curve
     if (!freqCurve.isEmpty()) {
         // Fill under curve
         juce::Path filled(freqCurve);
-        filled.lineTo(cx + W, cy + H);
-        filled.lineTo(cx, cy + H);
+        filled.lineTo(cx + W, cy + H * 0.5f);
+        filled.lineTo(cx, cy + H * 0.5f);
         filled.closeSubPath();
-        juce::ColourGradient grad(GREEN_LED.withAlpha(0.18f), 0, cy,
+        juce::ColourGradient grad(GREEN_LED.withAlpha(0.12f), 0, cy,
                                   GREEN_LED.withAlpha(0.0f),  0, cy + H, false);
         g.setGradientFill(grad);
         g.fillPath(filled);
 
         // Line
-        g.setColour(GREEN_LED.withAlpha(0.9f));
-        g.strokePath(freqCurve, juce::PathStrokeType(1.5f));
-    }
-
-    // Freq labels at bottom of display
-    g.setFont(juce::Font(juce::FontOptions(8.0f)));
-    g.setColour(juce::Colour(0xff2a4a2a));
-    for (auto [f, lbl] : std::initializer_list<std::pair<double, const char*>>{
-            {50,"50"},{100,"100"},{200,"200"},{500,"500"},
-            {1000,"1k"},{2000,"2k"},{5000,"5k"},{10000,"10k"}}) {
-        float fx = toX(f);
-        g.drawText(lbl, (int)fx - 10, (int)(cy + H) - 12, 20, 12,
-                   juce::Justification::centred);
+        g.setColour(GREEN_LED.withAlpha(0.85f));
+        g.strokePath(freqCurve, juce::PathStrokeType(2.0f));
     }
 }
 
@@ -247,13 +264,13 @@ void SSLEQEditor::resized()
     const int W = getWidth();
     const int H = getHeight();
 
-    // Display: top area below header
+    // Display: top area below header (larger for better visualization)
     displayArea = juce::Rectangle<float>(12.0f, 44.0f,
-                                         (float)W - 24.0f, 110.0f);
+                                         (float)W - 24.0f, 160.0f);
     buildFreqCurve();
 
     // Knobs row at bottom
-    const int knobAreaTop = 164;
+    const int knobAreaTop = 216;
     const int knobW = W / NUM_SLIDERS;
 
     for (int i = 0; i < NUM_SLIDERS; i++) {

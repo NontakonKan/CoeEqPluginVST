@@ -16,8 +16,8 @@ public:
 private:
     SSLEQAudioProcessor& audioProcessor;
 
-    // One rotary slider per parameter (6 EQ bands + output)
-    static constexpr int NUM_SLIDERS = 7;
+    // One rotary slider per parameter (Input + 6 EQ bands + Output)
+    static constexpr int NUM_SLIDERS = 8;
     juce::Slider sliders[NUM_SLIDERS];
     juce::Label  labels[NUM_SLIDERS];
     std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
@@ -26,6 +26,10 @@ private:
     // Frequency response display
     juce::Path   freqCurve;
     juce::Rectangle<float> displayArea;
+
+    // Logo images shown on the top-right
+    juce::Image logoImage1;
+    juce::Image logoImage2;
 
     void buildFreqCurve();
 

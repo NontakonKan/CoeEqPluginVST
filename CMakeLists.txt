@@ -20,7 +20,13 @@ juce_add_plugin(SSL_EQ_Plugin
     EDITOR_WANTS_KEYBOARD_FOCUS FALSE
     COPY_PLUGIN_AFTER_BUILD   FALSE
 )
-
+juce_add_binary_data(PluginBinaryData SOURCES
+    Source/logo.jpg
+    Source/logo2.png
+)
+target_link_libraries(SSL_EQ_Plugin PRIVATE
+    PluginBinaryData
+)
 # --- ADD THIS LINE TO FIX THE ERROR ---
 juce_generate_juce_header(SSL_EQ_Plugin)
 
